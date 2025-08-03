@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Éditer la configuration{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h3>Éditer la configuration</h3>
+  {% if message %}
+    <div class="alert alert-info">{{ message }}</div>
+  {% endif %}
+  <form method="post">
+    <div class="form-group">
+      <label for="DEBUG">DEBUG</label>
+      <select class="form-control" id="DEBUG" name="DEBUG">
+        <option value="True" {% if config.DEBUG %}selected{% endif %}>True</option>
+        <option value="False" {% if not config.DEBUG %}selected{% endif %}>False</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="TESTING">TESTING</label>
+      <select class="form-control" id="TESTING" name="TESTING">
+        <option value="True" {% if config.TESTING %}selected{% endif %}>True</option>
+        <option value="False" {% if not config.TESTING %}selected{% endif %}>False</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="BLOCK_ENABLED">BLOCK_ENABLED</label>
+      <select class="form-control" id="BLOCK_ENABLED" name="BLOCK_ENABLED">
+        <option value="True" {% if config.BLOCK_ENABLED %}selected{% endif %}>True</option>
+        <option value="False" {% if not config.BLOCK_ENABLED %}selected{% endif %}>False</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="PHONE_DISPLAY_FORMAT">PHONE_DISPLAY_FORMAT</label>
+      <input type="text" class="form-control" id="PHONE_DISPLAY_FORMAT" name="PHONE_DISPLAY_FORMAT" value="{{ config.PHONE_DISPLAY_FORMAT }}">
+    </div>
+    <div class="form-group">
+      <label for="PHONE_DISPLAY_SEPARATOR">PHONE_DISPLAY_SEPARATOR</label>
+      <input type="text" class="form-control" id="PHONE_DISPLAY_SEPARATOR" name="PHONE_DISPLAY_SEPARATOR" value="{{ config.PHONE_DISPLAY_SEPARATOR }}">
+    </div>
+    <hr>
+    {% for mode, prefix in modes %}
+      <h4>{{ mode|capitalize }}</h4>
+      <div class="form-group">
+        <label for="{{mode}}_ACTIONS">{{mode}}_ACTIONS (séparées par virgule)</label>
+        <input type="text" class="form-control" id="{{mode}}_ACTIONS" name="{{mode}}_ACTIONS"
+               value="{{ config[prefix ~ 'ACTIONS']|join(', ') }}">
+      </div>
+      <div class="form-group">
+        <label for="{{mode}}_GREETING_FILE">{{mode}}_GREETING_FILE</label>
+        <input type="text" class="form-control" id="{{mode}}_GREETING_FILE" name="{{mode}}_GREETING_FILE"
+               value="{{ config[prefix ~ 'GREETING_FILE'] }}">
+      </div>
+      <div class="form-group">
+        <label for="{{mode}}_RINGS_BEFORE_ANSWER">{{mode}}_RINGS_BEFORE_ANSWER</label>
+        <input type="number" class="form-control" id="{{mode}}_RINGS_BEFORE_ANSWER" name="{{mode}}_RINGS_BEFORE_ANSWER"
+               value="{{ config[prefix ~ 'RINGS_BEFORE_ANSWER'] }}">
+      </div>
+      <hr>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Sauvegarder</button>
+    <a href="/settings" class="btn btn-secondary">Annuler</a>
+  </form>
+</div>
+{% endblock %}

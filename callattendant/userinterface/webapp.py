@@ -40,7 +40,7 @@ from pprint import pformat
 
 import sqlite3
 from flask import Flask, request, g, current_app, render_template, redirect, \
-    jsonify, flash
+    jsonify, flash, send_from_directory
 from flask_paginate import Pagination, get_page_args
 from pygments import highlight
 from pygments.lexers import PythonLexer
@@ -50,6 +50,7 @@ from screening.query_db import query_db
 from screening.blacklist import Blacklist
 from screening.whitelist import Whitelist
 from messaging.voicemail import Message
+import configparser
 
 # Create the Flask micro web-framework application
 app = Flask(__name__)
@@ -863,6 +864,86 @@ def settings():
         config_file=file_path,
         curr_settings=curr_settings,
         file_settings=file_settings)
+
+
+@app.route('/settings/edit', methods=['GET', 'POST'])
+def settings_edit():
+    """
+    Affiche et traite le formulaire d'édition de la configuration.
+    """
+    config = current_app.config.get("MASTER_CONFIG")
+    file_name = config.get("CONFIG_FILE", "app.cfg")
+    file_path = os.path.join(config.data_path, file_name)
+    message = None
+
+    # Liste des modes et de leurs préfixes
+    modes = [
+        ("BLOCKED", "BLOCKED_"),
+        ("SCREENED", "SCREENED_"),
+        ("PERMITTED", "PERMITTED_"),
+    ]
+    # Champs à éditer pour chaque mode
+    mode_fields = [
+        ("ACTIONS", "actions"),
+        ("GREETING_FILE", "greeting_file"),
+        ("RINGS_BEFORE_ANSWER", "rings_before_answer"),
+    ]
+
+    if request.method == 'POST':
+        # Paramètres globaux
+        debug = request.form.get('DEBUG', 'False') == 'True'
+        testing = request.form.get('TESTING', 'False') == 'True'
+        block_enabled = request.form.get('BLOCK_ENABLED', 'False') == 'True'
+        phone_format = request.form.get('PHONE_DISPLAY_FORMAT', '###-###-####')
+        phone_sep = request.form.get('PHONE_DISPLAY_SEPARATOR', '-')
+
+        config['DEBUG'] = debug
+        config['TESTING'] = testing
+        config['BLOCK_ENABLED'] = block_enabled
+        config['PHONE_DISPLAY_FORMAT'] = phone_format
+        config['PHONE_DISPLAY_SEPARATOR'] = phone_sep
+
+        # Paramètres par mode
+        for mode, prefix in modes:
+            # Actions (tuple)
+            actions = request.form.get(f"{mode}_ACTIONS", "")
+            actions_tuple = tuple(a.strip() for a in actions.split(",") if a.strip())
+            config[f"{prefix}ACTIONS"] = actions_tuple
+            # Greeting file (string)
+            config[f"{prefix}GREETING_FILE"] = request.form.get(f"{mode}_GREETING_FILE", "")
+            # Rings before answer (int)
+            try:
+                config[f"{prefix}RINGS_BEFORE_ANSWER"] = int(request.form.get(f"{mode}_RINGS_BEFORE_ANSWER", "0"))
+            except ValueError:
+                config[f"{prefix}RINGS_BEFORE_ANSWER"] = 0
+
+        # Sauvegarde dans app.cfg
+        try:
+            with open(file_path, 'w') as f:
+                f.write("# app.cfg généré par l'interface web\n")
+                f.write(f"DEBUG = {debug}\n")
+                f.write(f"TESTING = {testing}\n")
+                f.write(f"BLOCK_ENABLED = {block_enabled}\n")
+                f.write(f"PHONE_DISPLAY_FORMAT = '{phone_format}'\n")
+                f.write(f"PHONE_DISPLAY_SEPARATOR = '{phone_sep}'\n")
+                for mode, prefix in modes:
+                    actions = config[f"{prefix}ACTIONS"]
+                    f.write(f"{prefix}ACTIONS = {actions}\n")
+                    f.write(f"{prefix}GREETING_FILE = '{config[f'{prefix}GREETING_FILE']}'\n")
+                    f.write(f"{prefix}RINGS_BEFORE_ANSWER = {config[f'{prefix}RINGS_BEFORE_ANSWER']}\n")
+            message = "Configuration sauvegardée avec succès."
+        except Exception as e:
+            message = f"Erreur lors de la sauvegarde : {e}"
+
+    # Pré-remplit le formulaire avec la config actuelle
+    return render_template(
+        "settings_edit.html",
+        active_nav_item='settings',
+        config=config,
+        modes=modes,
+        mode_fields=mode_fields,
+        message=message
+    )
 
 
 def format_phone_no(number):
