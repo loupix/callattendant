@@ -63,6 +63,50 @@ class TTSEngine:
         self.api_key = config.get('TTS_API_KEY', '')
         self.api_region = config.get('TTS_API_REGION', '')
         
+        # Modèles de personnes disponibles
+        self.person_models = {
+            'espeak': {
+                'Marie': {'voice': 'fr-fr+f2', 'speed': 1.0, 'pitch': 50},
+                'Pierre': {'voice': 'fr-fr+m2', 'speed': 1.0, 'pitch': 30},
+                'Sophie': {'voice': 'fr-fr+f3', 'speed': 1.1, 'pitch': 60},
+                'Jean': {'voice': 'fr-fr+m3', 'speed': 0.9, 'pitch': 25},
+                'Emma': {'voice': 'fr-fr+f4', 'speed': 1.2, 'pitch': 70},
+                'Louis': {'voice': 'fr-fr+m4', 'speed': 0.8, 'pitch': 20}
+            },
+            'pyttsx3': {
+                'Marie': {'voice': 'french', 'speed': 1.0, 'volume': 0.8},
+                'Pierre': {'voice': 'french', 'speed': 0.9, 'volume': 0.9},
+                'Sophie': {'voice': 'french', 'speed': 1.1, 'volume': 0.7},
+                'Jean': {'voice': 'french', 'speed': 0.8, 'volume': 1.0},
+                'Emma': {'voice': 'french', 'speed': 1.2, 'volume': 0.6},
+                'Louis': {'voice': 'french', 'speed': 0.7, 'volume': 1.0}
+            },
+            'gtts': {
+                'Marie': {'language': 'fr', 'slow': False},
+                'Pierre': {'language': 'fr', 'slow': True},
+                'Sophie': {'language': 'fr', 'slow': False},
+                'Jean': {'language': 'fr', 'slow': True},
+                'Emma': {'language': 'fr', 'slow': False},
+                'Louis': {'language': 'fr', 'slow': True}
+            },
+            'azure': {
+                'Marie': {'voice': 'fr-FR-Julie-Apollo', 'style': 'cheerful'},
+                'Pierre': {'voice': 'fr-FR-Paul-Apollo', 'style': 'friendly'},
+                'Sophie': {'voice': 'fr-FR-Julie-Apollo', 'style': 'excited'},
+                'Jean': {'voice': 'fr-FR-Paul-Apollo', 'style': 'calm'},
+                'Emma': {'voice': 'fr-FR-Julie-Apollo', 'style': 'hopeful'},
+                'Louis': {'voice': 'fr-FR-Paul-Apollo', 'style': 'serious'}
+            },
+            'aws': {
+                'Marie': {'voice': 'Lea', 'engine': 'neural'},
+                'Pierre': {'voice': 'Mathieu', 'engine': 'neural'},
+                'Sophie': {'voice': 'Lea', 'engine': 'standard'},
+                'Jean': {'voice': 'Mathieu', 'engine': 'standard'},
+                'Emma': {'voice': 'Lea', 'engine': 'neural'},
+                'Louis': {'voice': 'Mathieu', 'engine': 'neural'}
+            }
+        }
+        
         # Créer le répertoire de cache si nécessaire
         if self.cache_dir:
             Path(self.cache_dir).mkdir(parents=True, exist_ok=True)
@@ -90,17 +134,25 @@ class TTSEngine:
             self.logger.error(f"Moteur TTS non supporté : {self.engine}")
     
     def _init_espeak(self):
-        """Initialise eSpeak"""
+        """Initialise eSpeak-ng"""
         try:
-            # Vérifier si eSpeak est installé
-            result = subprocess.run(['espeak', '--version'], 
+            # Essayer d'abord eSpeak-ng
+            result = subprocess.run(['espeak-ng', '--version'], 
                                   capture_output=True, text=True)
             if result.returncode == 0:
-                self.logger.info("eSpeak initialisé")
+                self.logger.info("eSpeak-ng initialisé")
+                self.espeak_cmd = 'espeak-ng'
             else:
-                self.logger.error("eSpeak non trouvé")
+                # Fallback vers eSpeak classique
+                result = subprocess.run(['espeak', '--version'], 
+                                      capture_output=True, text=True)
+                if result.returncode == 0:
+                    self.logger.info("eSpeak classique initialisé")
+                    self.espeak_cmd = 'espeak'
+                else:
+                    self.logger.error("Aucune version d'eSpeak trouvée")
         except FileNotFoundError:
-            self.logger.error("eSpeak non installé")
+            self.logger.error("eSpeak-ng non installé")
     
     def _init_pyttsx3(self):
         """Initialise pyttsx3"""
@@ -195,26 +247,55 @@ class TTSEngine:
         except Exception as e:
             self.logger.error(f"Erreur sauvegarde cache : {e}")
     
-    def _synthesize_espeak(self, text):
+    def _synthesize_espeak(self, text, person_model=None):
         """Synthèse avec eSpeak"""
         try:
             # Créer un fichier temporaire
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
                 output_file = tmp_file.name
             
-            # Commande eSpeak
+            # Appliquer les paramètres du modèle de personne si spécifié
+            voice = self.voice
+            speed = self.speed
+            pitch = 50  # Pitch par défaut
+            
+            if person_model and person_model in self.person_models.get('espeak', {}):
+                model_config = self.person_models['espeak'][person_model]
+                voice = model_config.get('voice', voice)
+                speed = model_config.get('speed', speed)
+                pitch = model_config.get('pitch', pitch)
+            
+            # Commande eSpeak-ng (ou eSpeak)
             cmd = [
-                'espeak',
-                '-v', self.voice,
-                '-s', str(int(150 * self.speed)),  # Vitesse
+                getattr(self, 'espeak_cmd', 'espeak-ng'),
+                '-v', voice,
+                '-s', str(int(150 * speed)),  # Vitesse
                 '-a', str(self.volume),  # Volume
+                '-p', str(pitch),  # Pitch
+                '-q', '1',  # Qualité normale
                 '-w', output_file,
                 text
             ]
             
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode == 0:
-                return output_file
+                # Convertir vers 8kHz pour téléphone
+                try:
+                    import subprocess
+                    final_output = output_file.replace('.wav', '_8khz.wav')
+                    convert_cmd = ['sox', output_file, '-r', '8000', final_output]
+                    convert_result = subprocess.run(convert_cmd, capture_output=True, text=True)
+                    
+                    if convert_result.returncode == 0:
+                        # Nettoyer le fichier temporaire
+                        os.unlink(output_file)
+                        return final_output
+                    else:
+                        self.logger.warning(f"Conversion 8kHz échouée, utilisation du fichier original : {convert_result.stderr}")
+                        return output_file
+                except FileNotFoundError:
+                    self.logger.warning("sox non installé, utilisation du fichier original")
+                    return output_file
             else:
                 self.logger.error(f"Erreur eSpeak : {result.stderr}")
                 return None
@@ -222,11 +303,17 @@ class TTSEngine:
             self.logger.error(f"Erreur synthèse eSpeak : {e}")
             return None
     
-    def _synthesize_pyttsx3(self, text):
+    def _synthesize_pyttsx3(self, text, person_model=None):
         """Synthèse avec pyttsx3"""
         try:
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
                 output_file = tmp_file.name
+            
+            # Appliquer les paramètres du modèle de personne si spécifié
+            if person_model and person_model in self.person_models.get('pyttsx3', {}):
+                model_config = self.person_models['pyttsx3'][person_model]
+                self.pyttsx3_engine.setProperty('rate', int(200 * model_config.get('speed', self.speed)))
+                self.pyttsx3_engine.setProperty('volume', model_config.get('volume', self.volume / 100.0))
             
             self.pyttsx3_engine.save_to_file(text, output_file)
             self.pyttsx3_engine.runAndWait()
@@ -236,28 +323,55 @@ class TTSEngine:
             self.logger.error(f"Erreur synthèse pyttsx3 : {e}")
             return None
     
-    def _synthesize_gtts(self, text):
+    def _synthesize_gtts(self, text, person_model=None):
         """Synthèse avec Google TTS"""
         try:
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as output_file:
-                tts = gTTS(text=text, lang=self.language.split('-')[0])
+                # Appliquer les paramètres du modèle de personne si spécifié
+                lang = self.language.split('-')[0]
+                slow = False
+                
+                if person_model and person_model in self.person_models.get('gtts', {}):
+                    model_config = self.person_models['gtts'][person_model]
+                    lang = model_config.get('language', lang)
+                    slow = model_config.get('slow', slow)
+                
+                tts = gTTS(text=text, lang=lang, slow=slow)
                 tts.save(output_file.name)
                 return output_file.name
         except Exception as e:
             self.logger.error(f"Erreur synthèse Google TTS : {e}")
             return None
     
-    def _synthesize_azure(self, text):
+    def _synthesize_azure(self, text, person_model=None):
         """Synthèse avec Azure Speech"""
         try:
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as output_file:
+                # Appliquer les paramètres du modèle de personne si spécifié
+                voice_name = self.voice
+                style = None
+                
+                if person_model and person_model in self.person_models.get('azure', {}):
+                    model_config = self.person_models['azure'][person_model]
+                    voice_name = model_config.get('voice', voice_name)
+                    style = model_config.get('style', style)
+                
+                # Configurer la voix
+                self.azure_config.speech_synthesis_voice_name = voice_name
+                
                 audio_config = speechsdk.audio.AudioOutputConfig(filename=output_file.name)
                 synthesizer = speechsdk.SpeechSynthesizer(
                     speech_config=self.azure_config, 
                     audio_config=audio_config
                 )
                 
-                result = synthesizer.speak_text_async(text).get()
+                # Ajouter le style si spécifié
+                if style:
+                    ssml_text = f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="fr-FR"><voice name="{voice_name}"><mstts:express-as style="{style}">{text}</mstts:express-as></voice></speak>'
+                    result = synthesizer.speak_ssml_async(ssml_text).get()
+                else:
+                    result = synthesizer.speak_text_async(text).get()
+                
                 if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
                     return output_file.name
                 else:
@@ -267,13 +381,23 @@ class TTSEngine:
             self.logger.error(f"Erreur synthèse Azure : {e}")
             return None
     
-    def _synthesize_aws(self, text):
+    def _synthesize_aws(self, text, person_model=None):
         """Synthèse avec AWS Polly"""
         try:
+            # Appliquer les paramètres du modèle de personne si spécifié
+            voice_id = self.voice
+            engine = 'neural'
+            
+            if person_model and person_model in self.person_models.get('aws', {}):
+                model_config = self.person_models['aws'][person_model]
+                voice_id = model_config.get('voice', voice_id)
+                engine = model_config.get('engine', engine)
+            
             response = self.aws_client.synthesize_speech(
                 Text=text,
                 OutputFormat='mp3',
-                VoiceId=self.voice
+                VoiceId=voice_id,
+                Engine=engine
             )
             
             with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as output_file:
@@ -283,12 +407,13 @@ class TTSEngine:
             self.logger.error(f"Erreur synthèse AWS : {e}")
             return None
     
-    def synthesize(self, text):
+    def synthesize(self, text, person_model=None):
         """
         Synthétise le texte en audio
         
         Args:
             text: Texte à synthétiser
+            person_model: Modèle de personne à utiliser (ex: 'Marie', 'Pierre')
             
         Returns:
             str: Chemin vers le fichier audio généré, ou None en cas d'erreur
@@ -301,30 +426,48 @@ class TTSEngine:
             self.logger.warning("Texte vide")
             return None
         
+        # Appliquer le modèle de personne si spécifié
+        original_voice = self.voice
+        original_speed = self.speed
+        original_volume = self.volume
+        
+        if person_model and person_model in self.person_models.get(self.engine, {}):
+            model_config = self.person_models[self.engine][person_model]
+            self.voice = model_config.get('voice', self.voice)
+            self.speed = model_config.get('speed', self.speed)
+            self.volume = model_config.get('volume', self.volume)
+            self.logger.info(f"Application du modèle {person_model} pour {self.engine}")
+        
         # Vérifier le cache d'abord
-        cached_file = self._get_cached_file(text)
+        cache_key = f"{text}_{person_model}" if person_model else text
+        cached_file = self._get_cached_file(cache_key)
         if cached_file:
             return cached_file
         
         # Synthétiser selon le moteur
         audio_file = None
         if self.engine == 'espeak':
-            audio_file = self._synthesize_espeak(text)
+            audio_file = self._synthesize_espeak(text, person_model)
         elif self.engine == 'pyttsx3':
-            audio_file = self._synthesize_pyttsx3(text)
+            audio_file = self._synthesize_pyttsx3(text, person_model)
         elif self.engine == 'gtts':
-            audio_file = self._synthesize_gtts(text)
+            audio_file = self._synthesize_gtts(text, person_model)
         elif self.engine == 'azure':
-            audio_file = self._synthesize_azure(text)
+            audio_file = self._synthesize_azure(text, person_model)
         elif self.engine == 'aws':
-            audio_file = self._synthesize_aws(text)
+            audio_file = self._synthesize_aws(text, person_model)
         else:
             self.logger.error(f"Moteur TTS non supporté : {self.engine}")
             return None
         
+        # Restaurer les paramètres originaux
+        self.voice = original_voice
+        self.speed = original_speed
+        self.volume = original_volume
+        
         # Sauvegarder en cache si réussi
         if audio_file and os.path.exists(audio_file):
-            self._save_to_cache(text, audio_file)
+            self._save_to_cache(cache_key, audio_file)
             return audio_file
         
         return None
@@ -354,6 +497,26 @@ class TTSEngine:
                 self.logger.error(f"Erreur récupération voix pyttsx3 : {e}")
         
         return voices
+    
+    def get_available_person_models(self):
+        """Retourne la liste des modèles de personnes disponibles"""
+        return list(self.person_models.get(self.engine, {}).keys())
+    
+    def get_person_model_description(self, person_model):
+        """Retourne la description d'un modèle de personne"""
+        if person_model in self.person_models.get(self.engine, {}):
+            model_config = self.person_models[self.engine][person_model]
+            if self.engine == 'espeak':
+                return f"Voix: {model_config['voice']}, Vitesse: {model_config['speed']}, Pitch: {model_config['pitch']}"
+            elif self.engine == 'pyttsx3':
+                return f"Vitesse: {model_config['speed']}, Volume: {model_config['volume']}"
+            elif self.engine == 'gtts':
+                return f"Langue: {model_config['language']}, Ralenti: {model_config['slow']}"
+            elif self.engine == 'azure':
+                return f"Voix: {model_config['voice']}, Style: {model_config['style']}"
+            elif self.engine == 'aws':
+                return f"Voix: {model_config['voice']}, Moteur: {model_config['engine']}"
+        return "Modèle non disponible"
     
     def test_synthesis(self, text="Test de synthèse vocale"):
         """Teste la synthèse vocale"""

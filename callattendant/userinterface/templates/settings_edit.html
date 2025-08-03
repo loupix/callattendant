@@ -66,6 +66,19 @@
       <small class="form-text text-muted">Nom de la voix (ex: 'french', 'english', 'spanish')</small>
     </div>
     <div class="form-group">
+      <label for="TTS_PERSON_MODEL">TTS_PERSON_MODEL</label>
+      <select class="form-control" id="TTS_PERSON_MODEL" name="TTS_PERSON_MODEL">
+        <option value="">Aucun modèle (voix par défaut)</option>
+        <option value="Marie" {% if config.TTS_PERSON_MODEL == 'Marie' %}selected{% endif %}>Marie (voix féminine claire)</option>
+        <option value="Pierre" {% if config.TTS_PERSON_MODEL == 'Pierre' %}selected{% endif %}>Pierre (voix masculine posée)</option>
+        <option value="Sophie" {% if config.TTS_PERSON_MODEL == 'Sophie' %}selected{% endif %}>Sophie (voix féminine énergique)</option>
+        <option value="Jean" {% if config.TTS_PERSON_MODEL == 'Jean' %}selected{% endif %}>Jean (voix masculine calme)</option>
+        <option value="Emma" {% if config.TTS_PERSON_MODEL == 'Emma' %}selected{% endif %}>Emma (voix féminine jeune)</option>
+        <option value="Louis" {% if config.TTS_PERSON_MODEL == 'Louis' %}selected{% endif %}>Louis (voix masculine mature)</option>
+      </select>
+      <small class="form-text text-muted">Modèle de personne pour personnaliser la voix</small>
+    </div>
+    <div class="form-group">
       <label for="TTS_SPEED">TTS_SPEED</label>
       <input type="number" class="form-control" id="TTS_SPEED" name="TTS_SPEED" value="{{ config.TTS_SPEED }}" min="0.5" max="2.0" step="0.1">
       <small class="form-text text-muted">Vitesse de lecture (0.5 = lent, 1.0 = normal, 2.0 = rapide)</small>
@@ -119,9 +132,24 @@
       <small class="form-text text-muted">Testez la synthèse vocale avec les paramètres actuels</small>
     </div>
     
-    <div id="TTS_TEST_RESULT" class="alert" style="display: none;"></div>
-    
-    <hr>
+         <div id="TTS_TEST_RESULT" class="alert" style="display: none;"></div>
+     
+     <!-- Player audio pour tester les fichiers -->
+     <div class="form-group">
+       <label>Player audio</label>
+       <div class="card">
+         <div class="card-body">
+           <audio id="audioPlayer" controls style="width: 100%;">
+             Votre navigateur ne supporte pas l'élément audio.
+           </audio>
+           <div class="mt-2">
+             <small class="text-muted">Utilisez ce player pour écouter les fichiers audio générés</small>
+           </div>
+         </div>
+       </div>
+     </div>
+     
+     <hr>
     {% for mode, prefix in modes %}
       <h4>{{ mode|capitalize }}</h4>
       <div class="form-group">
@@ -149,8 +177,10 @@
 <script>
 function testTTS() {
     const testText = document.getElementById('TTS_TEST_TEXT').value;
+    const personModel = document.getElementById('TTS_PERSON_MODEL').value;
     const resultDiv = document.getElementById('TTS_TEST_RESULT');
     const testButton = document.querySelector('button[onclick="testTTS()"]');
+    const audioPlayer = document.getElementById('audioPlayer');
     
     // Désactiver le bouton pendant le test
     testButton.disabled = true;
@@ -161,13 +191,17 @@ function testTTS() {
     resultDiv.className = 'alert alert-info';
     resultDiv.innerHTML = 'Test de synthèse vocale en cours...';
     
+    // Préparer les données
+    const formData = new FormData();
+    formData.append('test_text', testText);
+    if (personModel) {
+        formData.append('person_model', personModel);
+    }
+    
     // Envoyer la requête
     fetch('/settings/tts/test', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'test_text=' + encodeURIComponent(testText)
+        body: formData
     })
     .then(response => response.json())
     .then(data => {
@@ -176,7 +210,13 @@ function testTTS() {
             resultDiv.innerHTML = `
                 <strong>Succès !</strong> ${data.message}
                 <br><small>Fichier généré : ${data.audio_file}</small>
+                <br><button class="btn btn-sm btn-primary mt-2" onclick="playAudio('${data.audio_file}')">
+                    <i class="fas fa-play"></i> Écouter
+                </button>
             `;
+            
+            // Charger l'audio dans le player
+            playAudio(data.audio_file);
         } else {
             resultDiv.className = 'alert alert-danger';
             resultDiv.innerHTML = `<strong>Erreur :</strong> ${data.message}`;
@@ -190,6 +230,17 @@ function testTTS() {
         // Réactiver le bouton
         testButton.disabled = false;
         testButton.innerHTML = '<i class="fas fa-play"></i> Tester TTS';
+    });
+}
+
+function playAudio(audioFile) {
+    const audioPlayer = document.getElementById('audioPlayer');
+    const audioUrl = `/static/audio/${audioFile.split('/').pop()}`;
+    
+    audioPlayer.src = audioUrl;
+    audioPlayer.load();
+    audioPlayer.play().catch(e => {
+        console.log('Erreur de lecture audio:', e);
     });
 }
 </script>

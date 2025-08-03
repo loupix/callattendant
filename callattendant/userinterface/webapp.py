@@ -866,6 +866,16 @@ def settings():
         file_settings=file_settings)
 
 
+@app.route('/static/audio/<filename>')
+def serve_audio(filename):
+    """
+    Sert les fichiers audio générés
+    """
+    config = current_app.config.get("MASTER_CONFIG")
+    audio_dir = os.path.join(config.data_path, "static", "audio")
+    return send_from_directory(audio_dir, filename)
+
+
 @app.route('/settings/tts/test', methods=['POST'])
 def settings_tts_test():
     """
@@ -875,16 +885,27 @@ def settings_tts_test():
     
     config = current_app.config.get("MASTER_CONFIG")
     text = request.form.get('test_text', 'Test de synthèse vocale')
+    person_model = request.form.get('person_model', '')
     
     try:
         tts = TTSEngine(config)
-        result = tts.synthesize(text)
+        result = tts.synthesize(text, person_model)
         
         if result and os.path.exists(result):
+            # Copier le fichier dans le répertoire static pour l'écouter
+            import shutil
+            static_audio_dir = os.path.join(config.data_path, "static", "audio")
+            os.makedirs(static_audio_dir, exist_ok=True)
+            
+            filename = f"test_{hash(text + person_model) % 10000}.wav"
+            dest_file = os.path.join(static_audio_dir, filename)
+            
+            shutil.copy2(result, dest_file)
+            
             return jsonify({
                 'success': True,
-                'message': f'Synthèse réussie : {result}',
-                'audio_file': result
+                'message': f'Synthèse réussie avec le modèle {person_model}' if person_model else 'Synthèse réussie',
+                'audio_file': f"static/audio/{filename}"
             })
         else:
             return jsonify({
@@ -939,6 +960,7 @@ def settings_edit():
         tts_enabled = request.form.get('TTS_ENABLED', 'False') == 'True'
         tts_engine = request.form.get('TTS_ENGINE', 'espeak')
         tts_voice = request.form.get('TTS_VOICE', 'french')
+        tts_person_model = request.form.get('TTS_PERSON_MODEL', '')
         tts_speed = float(request.form.get('TTS_SPEED', '1.0'))
         tts_volume = int(request.form.get('TTS_VOLUME', '80'))
         tts_language = request.form.get('TTS_LANGUAGE', 'fr-FR')
@@ -950,6 +972,7 @@ def settings_edit():
         config['TTS_ENABLED'] = tts_enabled
         config['TTS_ENGINE'] = tts_engine
         config['TTS_VOICE'] = tts_voice
+        config['TTS_PERSON_MODEL'] = tts_person_model
         config['TTS_SPEED'] = tts_speed
         config['TTS_VOLUME'] = tts_volume
         config['TTS_LANGUAGE'] = tts_language
@@ -985,6 +1008,7 @@ def settings_edit():
                 f.write(f"TTS_ENABLED = {tts_enabled}\n")
                 f.write(f"TTS_ENGINE = '{tts_engine}'\n")
                 f.write(f"TTS_VOICE = '{tts_voice}'\n")
+                f.write(f"TTS_PERSON_MODEL = '{tts_person_model}'\n")
                 f.write(f"TTS_SPEED = {tts_speed}\n")
                 f.write(f"TTS_VOLUME = {tts_volume}\n")
                 f.write(f"TTS_LANGUAGE = '{tts_language}'\n")
