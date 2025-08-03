@@ -866,6 +866,38 @@ def settings():
         file_settings=file_settings)
 
 
+@app.route('/settings/tts/test', methods=['POST'])
+def settings_tts_test():
+    """
+    Teste la synthèse vocale avec les paramètres actuels
+    """
+    from messaging.tts_engine import TTSEngine
+    
+    config = current_app.config.get("MASTER_CONFIG")
+    text = request.form.get('test_text', 'Test de synthèse vocale')
+    
+    try:
+        tts = TTSEngine(config)
+        result = tts.synthesize(text)
+        
+        if result and os.path.exists(result):
+            return jsonify({
+                'success': True,
+                'message': f'Synthèse réussie : {result}',
+                'audio_file': result
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Échec de la synthèse vocale'
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erreur : {str(e)}'
+        })
+
+
 @app.route('/settings/edit', methods=['GET', 'POST'])
 def settings_edit():
     """
@@ -903,6 +935,28 @@ def settings_edit():
         config['PHONE_DISPLAY_FORMAT'] = phone_format
         config['PHONE_DISPLAY_SEPARATOR'] = phone_sep
 
+        # Paramètres TTS
+        tts_enabled = request.form.get('TTS_ENABLED', 'False') == 'True'
+        tts_engine = request.form.get('TTS_ENGINE', 'espeak')
+        tts_voice = request.form.get('TTS_VOICE', 'french')
+        tts_speed = float(request.form.get('TTS_SPEED', '1.0'))
+        tts_volume = int(request.form.get('TTS_VOLUME', '80'))
+        tts_language = request.form.get('TTS_LANGUAGE', 'fr-FR')
+        tts_cache_dir = request.form.get('TTS_CACHE_DIR', 'data/tts_cache')
+        tts_api_key = request.form.get('TTS_API_KEY', '')
+        tts_api_region = request.form.get('TTS_API_REGION', '')
+
+        # Configuration TTS
+        config['TTS_ENABLED'] = tts_enabled
+        config['TTS_ENGINE'] = tts_engine
+        config['TTS_VOICE'] = tts_voice
+        config['TTS_SPEED'] = tts_speed
+        config['TTS_VOLUME'] = tts_volume
+        config['TTS_LANGUAGE'] = tts_language
+        config['TTS_CACHE_DIR'] = tts_cache_dir
+        config['TTS_API_KEY'] = tts_api_key
+        config['TTS_API_REGION'] = tts_api_region
+
         # Paramètres par mode
         for mode, prefix in modes:
             # Actions (tuple)
@@ -926,6 +980,18 @@ def settings_edit():
                 f.write(f"BLOCK_ENABLED = {block_enabled}\n")
                 f.write(f"PHONE_DISPLAY_FORMAT = '{phone_format}'\n")
                 f.write(f"PHONE_DISPLAY_SEPARATOR = '{phone_sep}'\n")
+                
+                # Configuration TTS
+                f.write(f"TTS_ENABLED = {tts_enabled}\n")
+                f.write(f"TTS_ENGINE = '{tts_engine}'\n")
+                f.write(f"TTS_VOICE = '{tts_voice}'\n")
+                f.write(f"TTS_SPEED = {tts_speed}\n")
+                f.write(f"TTS_VOLUME = {tts_volume}\n")
+                f.write(f"TTS_LANGUAGE = '{tts_language}'\n")
+                f.write(f"TTS_CACHE_DIR = '{tts_cache_dir}'\n")
+                f.write(f"TTS_API_KEY = '{tts_api_key}'\n")
+                f.write(f"TTS_API_REGION = '{tts_api_region}'\n")
+                
                 for mode, prefix in modes:
                     actions = config[f"{prefix}ACTIONS"]
                     f.write(f"{prefix}ACTIONS = {actions}\n")

@@ -38,6 +38,89 @@
       <label for="PHONE_DISPLAY_SEPARATOR">PHONE_DISPLAY_SEPARATOR</label>
       <input type="text" class="form-control" id="PHONE_DISPLAY_SEPARATOR" name="PHONE_DISPLAY_SEPARATOR" value="{{ config.PHONE_DISPLAY_SEPARATOR }}">
     </div>
+    
+    <hr>
+    <h4>Moteur TTS (Text-to-Speech)</h4>
+    <div class="form-group">
+      <label for="TTS_ENABLED">TTS_ENABLED</label>
+      <select class="form-control" id="TTS_ENABLED" name="TTS_ENABLED">
+        <option value="True" {% if config.TTS_ENABLED %}selected{% endif %}>True</option>
+        <option value="False" {% if not config.TTS_ENABLED %}selected{% endif %}>False</option>
+      </select>
+      <small class="form-text text-muted">Active ou désactiver la génération de voix par TTS</small>
+    </div>
+    <div class="form-group">
+      <label for="TTS_ENGINE">TTS_ENGINE</label>
+      <select class="form-control" id="TTS_ENGINE" name="TTS_ENGINE">
+        <option value="espeak" {% if config.TTS_ENGINE == 'espeak' %}selected{% endif %}>eSpeak (local)</option>
+        <option value="pyttsx3" {% if config.TTS_ENGINE == 'pyttsx3' %}selected{% endif %}>pyttsx3 (local)</option>
+        <option value="gtts" {% if config.TTS_ENGINE == 'gtts' %}selected{% endif %}>Google TTS (en ligne)</option>
+        <option value="azure" {% if config.TTS_ENGINE == 'azure' %}selected{% endif %}>Azure Speech (en ligne)</option>
+        <option value="aws" {% if config.TTS_ENGINE == 'aws' %}selected{% endif %}>AWS Polly (en ligne)</option>
+      </select>
+      <small class="form-text text-muted">Choisissez le moteur TTS à utiliser</small>
+    </div>
+    <div class="form-group">
+      <label for="TTS_VOICE">TTS_VOICE</label>
+      <input type="text" class="form-control" id="TTS_VOICE" name="TTS_VOICE" value="{{ config.TTS_VOICE }}">
+      <small class="form-text text-muted">Nom de la voix (ex: 'french', 'english', 'spanish')</small>
+    </div>
+    <div class="form-group">
+      <label for="TTS_SPEED">TTS_SPEED</label>
+      <input type="number" class="form-control" id="TTS_SPEED" name="TTS_SPEED" value="{{ config.TTS_SPEED }}" min="0.5" max="2.0" step="0.1">
+      <small class="form-text text-muted">Vitesse de lecture (0.5 = lent, 1.0 = normal, 2.0 = rapide)</small>
+    </div>
+    <div class="form-group">
+      <label for="TTS_VOLUME">TTS_VOLUME</label>
+      <input type="number" class="form-control" id="TTS_VOLUME" name="TTS_VOLUME" value="{{ config.TTS_VOLUME }}" min="0" max="100" step="1">
+      <small class="form-text text-muted">Volume de sortie (0-100)</small>
+    </div>
+    <div class="form-group">
+      <label for="TTS_LANGUAGE">TTS_LANGUAGE</label>
+      <select class="form-control" id="TTS_LANGUAGE" name="TTS_LANGUAGE">
+        <option value="fr-FR" {% if config.TTS_LANGUAGE == 'fr-FR' %}selected{% endif %}>Français (France)</option>
+        <option value="fr-CA" {% if config.TTS_LANGUAGE == 'fr-CA' %}selected{% endif %}>Français (Canada)</option>
+        <option value="en-US" {% if config.TTS_LANGUAGE == 'en-US' %}selected{% endif %}>Anglais (États-Unis)</option>
+        <option value="en-GB" {% if config.TTS_LANGUAGE == 'en-GB' %}selected{% endif %}>Anglais (Royaume-Uni)</option>
+        <option value="es-ES" {% if config.TTS_LANGUAGE == 'es-ES' %}selected{% endif %}>Espagnol (Espagne)</option>
+        <option value="de-DE" {% if config.TTS_LANGUAGE == 'de-DE' %}selected{% endif %}>Allemand</option>
+        <option value="it-IT" {% if config.TTS_LANGUAGE == 'it-IT' %}selected{% endif %}>Italien</option>
+      </select>
+      <small class="form-text text-muted">Langue pour la synthèse vocale</small>
+    </div>
+    <div class="form-group">
+      <label for="TTS_CACHE_DIR">TTS_CACHE_DIR</label>
+      <input type="text" class="form-control" id="TTS_CACHE_DIR" name="TTS_CACHE_DIR" value="{{ config.TTS_CACHE_DIR }}">
+      <small class="form-text text-muted">Répertoire de cache pour les fichiers audio générés</small>
+    </div>
+    <div class="form-group">
+      <label for="TTS_API_KEY">TTS_API_KEY</label>
+      <input type="password" class="form-control" id="TTS_API_KEY" name="TTS_API_KEY" value="{{ config.TTS_API_KEY }}">
+      <small class="form-text text-muted">Clé API pour les services en ligne (Azure, AWS, etc.)</small>
+    </div>
+    <div class="form-group">
+      <label for="TTS_API_REGION">TTS_API_REGION</label>
+      <input type="text" class="form-control" id="TTS_API_REGION" name="TTS_API_REGION" value="{{ config.TTS_API_REGION }}">
+      <small class="form-text text-muted">Région pour les services cloud (ex: 'westeurope' pour Azure)</small>
+    </div>
+    
+    <!-- Test TTS -->
+    <div class="form-group">
+      <label for="TTS_TEST_TEXT">Texte de test</label>
+      <div class="input-group">
+        <input type="text" class="form-control" id="TTS_TEST_TEXT" 
+               value="Bonjour, ceci est un test de synthèse vocale.">
+        <div class="input-group-append">
+          <button type="button" class="btn btn-info" onclick="testTTS()">
+            <i class="fas fa-play"></i> Tester TTS
+          </button>
+        </div>
+      </div>
+      <small class="form-text text-muted">Testez la synthèse vocale avec les paramètres actuels</small>
+    </div>
+    
+    <div id="TTS_TEST_RESULT" class="alert" style="display: none;"></div>
+    
     <hr>
     {% for mode, prefix in modes %}
       <h4>{{ mode|capitalize }}</h4>
@@ -62,4 +145,52 @@
     <a href="/settings" class="btn btn-secondary">Annuler</a>
   </form>
 </div>
+
+<script>
+function testTTS() {
+    const testText = document.getElementById('TTS_TEST_TEXT').value;
+    const resultDiv = document.getElementById('TTS_TEST_RESULT');
+    const testButton = document.querySelector('button[onclick="testTTS()"]');
+    
+    // Désactiver le bouton pendant le test
+    testButton.disabled = true;
+    testButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Test en cours...';
+    
+    // Afficher le résultat
+    resultDiv.style.display = 'block';
+    resultDiv.className = 'alert alert-info';
+    resultDiv.innerHTML = 'Test de synthèse vocale en cours...';
+    
+    // Envoyer la requête
+    fetch('/settings/tts/test', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'test_text=' + encodeURIComponent(testText)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.className = 'alert alert-success';
+            resultDiv.innerHTML = `
+                <strong>Succès !</strong> ${data.message}
+                <br><small>Fichier généré : ${data.audio_file}</small>
+            `;
+        } else {
+            resultDiv.className = 'alert alert-danger';
+            resultDiv.innerHTML = `<strong>Erreur :</strong> ${data.message}`;
+        }
+    })
+    .catch(error => {
+        resultDiv.className = 'alert alert-danger';
+        resultDiv.innerHTML = `<strong>Erreur :</strong> ${error.message}`;
+    })
+    .finally(() => {
+        // Réactiver le bouton
+        testButton.disabled = false;
+        testButton.innerHTML = '<i class="fas fa-play"></i> Tester TTS';
+    });
+}
+</script>
 {% endblock %}
