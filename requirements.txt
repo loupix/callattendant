@@ -22,3 +22,9 @@ RPi.GPIO==0.7.0
 RPIO==0.10.0
 soupsieve==1.9.6
 Werkzeug==1.0.1
+# TTS Dependencies
+TTS>=0.22.0
+pydub>=0.25.1
+simpleaudio>=1.0.4
+torch>=1.13.0
+torchaudio>=0.13.0

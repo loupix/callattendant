@@ -1,0 +1,52 @@
+{
+  "intents": [
+    {
+      "tag": "greeting",
+      "patterns": ["bonjour", "salut", "hello"],
+      "responses": [
+        "Bonjour, bienvenue chez CallAttendant. Comment puis-je vous aider ?",
+        "Salut ! Je suis votre assistant vocal. Que puis-je faire pour vous ?"
+      ]
+    },
+    {
+      "tag": "goodbye",
+      "patterns": ["au revoir", "bye", "à bientôt"],
+      "responses": [
+        "Au revoir ! Passez une excellente journée.",
+        "À bientôt ! N'hésitez pas à rappeler si vous avez besoin d'aide."
+      ]
+    },
+    {
+      "tag": "thanks",
+      "patterns": ["merci", "thanks", "merci beaucoup"],
+      "responses": [
+        "Je vous en prie ! C'est un plaisir de vous aider.",
+        "De rien ! N'hésitez pas si vous avez d'autres questions."
+      ]
+    },
+    {
+      "tag": "help",
+      "patterns": ["aide", "help", "comment ça marche"],
+      "responses": [
+        "Je peux vous aider à naviguer dans le système de messagerie vocale. Appuyez sur 1 pour laisser un message, ou sur 0 pour raccrocher.",
+        "Pour utiliser le système : appuyez sur 1 pour enregistrer un message, sur 2 pour écouter vos messages, ou sur 0 pour terminer l'appel."
+      ]
+    },
+    {
+      "tag": "message_instructions",
+      "patterns": ["message", "laisser un message"],
+      "responses": [
+        "Parfait ! Après le bip sonore, vous pourrez enregistrer votre message. Parlez clairement et appuyez sur la touche étoile quand vous avez terminé.",
+        "Vous allez maintenant pouvoir enregistrer votre message. Parlez après le bip et appuyez sur étoile pour terminer."
+      ]
+    },
+    {
+      "tag": "error",
+      "patterns": ["erreur", "problème"],
+      "responses": [
+        "Je suis désolé, il semble y avoir un problème technique. Veuillez réessayer ou rappeler plus tard.",
+        "Une erreur s'est produite. Veuillez patienter un moment et réessayer."
+      ]
+    }
+  ]
+} 
