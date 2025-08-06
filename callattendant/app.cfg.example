@@ -215,3 +215,44 @@ GPIO_LED_MESSAGE_COUNT_PINS = (8, 7, 27, 23, 10, 11, 9, 18)
 
 # GPIO_LED_MESSAGE_COUNT_KWARGS: This is a dictionary of optional arguments (used by GPIOZero LEDBoard)
 GPIO_LED_MESSAGE_COUNT_KWARGS = {"active_high": True}
+
+# ==============================================================================
+# TTS (Text-to-Speech) Engine Configuration
+# ==============================================================================
+
+# TTS_ENABLED: Active ou désactive la génération de voix par TTS
+TTS_ENABLED = False
+
+# TTS_ENGINE: Moteur TTS à utiliser
+#   Options: "espeak" (local), "pyttsx3" (local), "gtts" (Google TTS), 
+#            "azure" (Azure Speech), "aws" (AWS Polly),
+#            "xtts-v2" (LLM voice cloning), "chattts" (LLM dialogue), 
+#            "dia" (LLM multi-speaker), "kokoro" (LLM lightweight),
+#            "chatterbox" (LLM émotionnel), "melotts" (LLM multilingue),
+#            "openvoice-v2" (LLM voice cloning instantané)
+TTS_ENGINE = "espeak"
+
+# TTS_VOICE: Nom de la voix à utiliser
+#   Exemples: "french", "english", "spanish" (selon le moteur)
+TTS_VOICE = "french"
+
+# TTS_SPEED: Vitesse de lecture (0.5 = lent, 1.0 = normal, 2.0 = rapide)
+TTS_SPEED = 1.0
+
+# TTS_VOLUME: Volume de sortie (0-100)
+TTS_VOLUME = 80
+
+# TTS_LANGUAGE: Langue pour la synthèse vocale
+TTS_LANGUAGE = "fr-FR"
+
+# TTS_CACHE_DIR: Répertoire de cache pour les fichiers audio générés
+TTS_CACHE_DIR = "data/tts_cache"
+
+# TTS_API_KEY: Clé API pour les services en ligne (Azure, AWS, etc.)
+TTS_API_KEY = ""
+
+# TTS_API_REGION: Région pour les services cloud (ex: 'westeurope' pour Azure)
+TTS_API_REGION = ""
+
+# TTS_MODEL_DIR: Répertoire pour les modèles LLM TTS
+TTS_MODEL_DIR = "data/tts_models"
