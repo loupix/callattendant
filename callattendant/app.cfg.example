@@ -225,7 +225,11 @@ TTS_ENABLED = False
 
 # TTS_ENGINE: Moteur TTS à utiliser
 #   Options: "espeak" (local), "pyttsx3" (local), "gtts" (Google TTS), 
-#            "azure" (Azure Speech), "aws" (AWS Polly)
+#            "azure" (Azure Speech), "aws" (AWS Polly),
+#            "xtts-v2" (LLM voice cloning), "chattts" (LLM dialogue), 
+#            "dia" (LLM multi-speaker), "kokoro" (LLM lightweight),
+#            "chatterbox" (LLM émotionnel), "melotts" (LLM multilingue),
+#            "openvoice-v2" (LLM voice cloning instantané)
 TTS_ENGINE = "espeak"
 
 # TTS_VOICE: Nom de la voix à utiliser
@@ -249,3 +253,6 @@ TTS_API_KEY = ""
 
 # TTS_API_REGION: Région pour les services cloud (ex: 'westeurope' pour Azure)
 TTS_API_REGION = ""
+
+# TTS_MODEL_DIR: Répertoire pour les modèles LLM TTS
+TTS_MODEL_DIR = "data/tts_models"

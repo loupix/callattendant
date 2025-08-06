@@ -29,3 +29,15 @@ pyttsx3>=2.90
 gTTS>=2.3.1
 # azure-cognitiveservices-speech-sdk>=1.31.0
 boto3>=1.26.0
+
+# LLM TTS Engine dependencies
+# Note: Sur Raspberry Pi 3 + Python 3.9, installer PyTorch manuellement :
+# pip3 install torch==1.13.1 --index-url https://download.pytorch.org/whl/cpu
+transformers>=4.20.0,<4.30.0  # Compatible Python 3.9
+# torch>=1.13.0,<2.0.0  # Installer manuellement sur Pi3
+# torchaudio>=0.13.0,<0.14.0  # Installer manuellement sur Pi3
+soundfile>=0.10.0,<0.13.0
+huggingface-hub>=0.10.0,<0.17.0
+numpy>=1.21.0,<1.24.0  # Compatible Python 3.9
+scipy>=1.7.0,<1.10.0
+librosa>=0.9.0,<0.10.0  # Traitement audio
